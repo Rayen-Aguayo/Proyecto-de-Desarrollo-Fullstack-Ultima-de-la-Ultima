@@ -12,6 +12,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import org.springframework.security.web.access.AccessDeniedHandler;
 
+import com.example.Registro.de.materiales.dto.ApiResponse;
 import com.example.Registro.de.materiales.security.JwtFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 

@@ -1,7 +1,5 @@
 package com.example.Pagos.model;
 
-
-
 import java.time.LocalDate;
 import java.time.LocalTime;
 
