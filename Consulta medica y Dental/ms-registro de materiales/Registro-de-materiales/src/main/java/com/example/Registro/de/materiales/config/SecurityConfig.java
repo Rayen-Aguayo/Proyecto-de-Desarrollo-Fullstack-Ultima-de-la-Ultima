@@ -5,7 +5,6 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.*;
 
-
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -13,12 +12,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import org.springframework.security.web.access.AccessDeniedHandler;
 
-import com.example.Registro.de.materiales.dto.ApiResponse;
 import com.example.Registro.de.materiales.security.JwtFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.http.HttpServletResponse;
-
 
 @Configuration
 @RequiredArgsConstructor
