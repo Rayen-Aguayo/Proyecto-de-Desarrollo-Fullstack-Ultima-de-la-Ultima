@@ -3,7 +3,8 @@ package com.example.Medico.service;
 import static net.logstash.logback.argument.StructuredArguments.keyValue;
 
 import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
+
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
 import com.example.Medico.dto.MedicoDTO;
@@ -19,14 +20,13 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class MedicoService {
 
-    @Autowired
-    private MedicoRepository medicoRepository;
+    private final MedicoRepository medicoRepository;
 
     public Medico crear(MedicoDTO dto) {
         log.info("Crear medico", keyValue("nombre", dto.getNombreMedico()));
 
 
-        Medico m = new Medico(dto.getRun(),dto.getNombreMedico(),dto.getEdad(), 
+        Medico m = new Medico(dto.getRunMedico(),dto.getNombreMedico(),dto.getEdad(), 
         dto.getNroTelefono(), dto.getEspecialidad(), dto.getFirmaMedico());
 
         return medicoRepository.save(m);
@@ -37,17 +37,17 @@ public class MedicoService {
         return medicoRepository.findAll();
     }
 
-    public Medico obtener(String id) {
-        log.info("Obtener Medicos", keyValue("run", id));
+    public Medico obtener(@NonNull String id) {              
+        log.info("Obtener Medico", keyValue("run", id));
 
         return medicoRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Medico no encontrado"));
+            .orElseThrow(() -> new EntityNotFoundException("Medico no encontrado"));
     }
 
-    public Medico actualizar(String id, MedicoDTO dto) {
-        log.info("Actualizar Medico", keyValue("run", id));
+    public Medico actualizar(@NonNull String id, MedicoDTO dto) { 
+        log.info("Actualizar Medico", keyValue("id", id));
 
-        Medico m = obtener(id);
+        Medico m = obtener(id);  
         m.setNombreMedico(dto.getNombreMedico());
         m.setEspecialidad(dto.getEspecialidad());
         m.setEdad(dto.getEdad());
@@ -57,7 +57,7 @@ public class MedicoService {
         return medicoRepository.save(m);
     }
 
-    public void eliminar(String id) {
+    public void eliminar(@NonNull String id) {
         log.warn("Eliminar Medico", keyValue("run", id));
         medicoRepository.deleteById(id);
     }
