@@ -1,192 +1,210 @@
 package com.example.ms_facturacion.y.presupuesto.Controller;
 
-import org.springframework.web.bind.annotation.RestController;
 
-import com.example.ms_facturacion.y.presupuesto.dto.ApiResponse;
 import com.example.ms_facturacion.y.presupuesto.dto.FacturacionYPresupuestoDTO;
 import com.example.ms_facturacion.y.presupuesto.dto.FacturacionYPresupuestoResponse;
+import com.example.ms_facturacion.y.presupuesto.dto.MedicoResponse;
+import com.example.ms_facturacion.y.presupuesto.dto.PacienteResponse;
+import com.example.ms_facturacion.y.presupuesto.security.JwtUtil;
 import com.example.ms_facturacion.y.presupuesto.service.FacturacionYPresupuestoService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
 
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 
-import org.springframework.hateoas.EntityModel;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
-
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
-
-@Tag(name = "Facturación y Presupuesto", description = "Operaciones relacionadas con la gestión de cobros y presupuestos médicos")
-@RestController
-@RequestMapping("/api/v1/facturacio-y-presupuesto")
-@RequiredArgsConstructor
+@WebMvcTest(FacturacionYPresupuestoController.class)
+@AutoConfigureMockMvc(addFilters = false)
+@ActiveProfiles("test")
 public class FacturacionYPresupuestoController {
 
-    private final FacturacionYPresupuestoService facturacionYPresupuestoService;
 
-    @Operation(
-        summary = "Listar facturaciones y presupuestos",
-        description = "Retorna todos los registros de facturación del sistema. Requiere rol USER o ADMIN."
-    )
-    @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Listado obtenido correctamente"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Acceso denegado")
-    })
+    @Autowired
+    private MockMvc mockMvc;
 
-    @GetMapping
-    @PreAuthorize("hasAnyRole('USER','ADMIN')")
-    public ResponseEntity<ApiResponse<List<FacturacionYPresupuestoResponse>>> listar(
-            @RequestHeader("Authorization") String token) {
+    @MockitoBean
+    private FacturacionYPresupuestoService service;
 
-        return ResponseEntity.ok(
-                ApiResponse.<List<FacturacionYPresupuestoResponse>>builder()
-                        .success(true)
-                        .message("Listado obtenido")
-                        .data(facturacionYPresupuestoService.listar(token))
-                        .build()
-        );
+    @MockitoBean
+    private JwtUtil jwtUtil;
+
+    @Test
+    void debeListarFacturacionYPresupuesto() throws Exception {
+        PacienteResponse paciente = new PacienteResponse();
+        paciente.setRunPaciente("11111111-1");
+        paciente.setNombrePaciente("Juan Pérez");
+
+        MedicoResponse medico = new MedicoResponse();
+        medico.setRunMedico("22222222-2");
+        medico.setNombreMedico("Dra. Soto");
+
+        FacturacionYPresupuestoResponse response = FacturacionYPresupuestoResponse.builder()
+                .id(1L)
+                .presupuesto(30.000)
+                .paciente(paciente)
+                .medico(medico)
+                .tratamiento("tratamiento")
+                .diasDuracion(8)
+                .gestionPagos("gestion pagos")
+                .build();
+
+        when(service.listar(anyString())).thenReturn(List.of(response));
+
+        mockMvc.perform(get("/api/v1/facturacio-y-presupuesto")
+                        .header("Authorization", "Bearer token-de-prueba"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].id").value(1))
+                .andExpect(jsonPath("$.data[0].atencion").value("facturacio y presupuesto"))
+                .andExpect(jsonPath("$.data[0].paciente.nombrePaciente").value("Juan Pérez"))
+                .andExpect(jsonPath("$.data[0].medico.nombreMedico").value("Dra. Soto"));
     }
 
-    @Operation(
-        summary = "Crear registro de facturación",
-        description = "Crea un nuevo cobro o presupuesto. Requiere rol ADMIN."
-    )
-    @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "facturación y presupuesto creados exitosamente"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Acceso denegado"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Datos de entrada inválidos")
-    })
+    @Test
+    void debeObtenerFacturacionYPresupuestoPorId() throws Exception {
+        PacienteResponse paciente = new PacienteResponse();
+        paciente.setRunPaciente("11111111-1");
+        paciente.setNombrePaciente("Juan Pérez");
 
-    @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN')")
-    public ResponseEntity<ApiResponse<FacturacionYPresupuestoResponse>> crear(
-            @Valid @RequestBody FacturacionYPresupuestoDTO dto,
-            @RequestHeader("Authorization") String token) {
+        MedicoResponse medico = new MedicoResponse();
+        medico.setRunMedico("22222222-2");
+        medico.setNombreMedico("Dra. Soto");
+       
 
-        return ResponseEntity.status(201).body(
-                ApiResponse.<FacturacionYPresupuestoResponse>builder()
-                        .success(true)
-                        .message("Registro de facturación creado")
-                        .data(facturacionYPresupuestoService.crear(dto, token))
-                        .build()
-        );
+        FacturacionYPresupuestoResponse response = FacturacionYPresupuestoResponse.builder()
+                .id(1L)
+                .presupuesto(30.000)
+                .paciente(paciente)
+                .medico(medico)
+                .tratamiento("tratamiento")
+                .diasDuracion(8)
+                .gestionPagos("gestion pagos")
+                .build();
+
+        when(service.obtener(eq(1L), anyString())).thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/facturacio-y-presupuesto/1")
+                        .header("Authorization", "Bearer token-de-prueba"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(1))
+                .andExpect(jsonPath("$.data.paciente.nombrePaciente").value("Juan Pérez"))
+                .andExpect(jsonPath("$.data.medico.nombreMedico").value("Dra. Soto"));
     }
 
-    @Operation(
-        summary = "Obtener facturación por ID",
-        description = "Busca un cobro o presupuesto específico utilizando su identificador único. Requiere rol USER o ADMIN."
-    )
-        @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "facturación y presupuesto obtenida exitosamente"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Acceso denegado")
-    })
+    @Test
+    void debeCrearFacturacionYPresupuesto() throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
 
-    @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('USER','ADMIN')")
-    public ResponseEntity<ApiResponse<FacturacionYPresupuestoResponse>> obtener(
-            @Parameter(description = "ID del registro de facturación", example = "1")
-            @PathVariable Long id,
-            @RequestHeader("Authorization") String token) {
-        
-        FacturacionYPresupuestoResponse FacturacionYPresupuesto = facturacionYPresupuestoService.obtener(id, token);
+        FacturacionYPresupuestoDTO dto = new FacturacionYPresupuestoDTO();
+        dto.setPresupuesto(30.000);
+        dto.setRunPaciente("11111111-1");
+        dto.setNombrePaciente("Juan Pérez");
+        dto.setRunMedico("22222222-2");
+        dto.setNombreMedico("Dra. Soto");
+        dto.setTratamiento("tratamiento");
+        dto.setDiasDuracion(8);
+        dto.setGestionPagos("gestion pagos");
 
-        EntityModel<FacturacionYPresupuestoResponse> recurso = EntityModel.of(FacturacionYPresupuesto);
+        PacienteResponse paciente = new PacienteResponse();
+        paciente.setRunPaciente("11111111-1");
+        paciente.setNombrePaciente("Juan Pérez");
 
+        MedicoResponse medico = new MedicoResponse();
+        medico.setRunMedico("22222222-2");
+        medico.setNombreMedico("Dra. Soto");
 
-        recurso.add(
-                linkTo(methodOn(FacturacionYPresupuestoController.class).obtener(id, token))
-                        .withSelfRel()
-        );
+        FacturacionYPresupuestoResponse response = FacturacionYPresupuestoResponse.builder()
+                .id(1L)
+                .presupuesto(30.000)
+                .paciente(paciente)
+                .medico(medico)
+                .tratamiento("tratamiento")
+                .diasDuracion(8)
+                .gestionPagos("gestion pagos")
+                .build();
 
-        recurso.add(
-                linkTo(methodOn(FacturacionYPresupuestoController.class).listar(token))
-                        .withRel("all")
-        );
+        when(service.crear(any(FacturacionYPresupuestoDTO.class), anyString())).thenReturn(response);
 
-        recurso.add(
-                linkTo(methodOn(FacturacionYPresupuestoController.class).actualizar(id, null, token))
-                        .withRel("update")
-        );
-
-        recurso.add(
-                linkTo(methodOn(FacturacionYPresupuestoController.class).eliminar(id))
-                        .withRel("delete")
-        );
-
-            return ResponseEntity.ok(
-                    ApiResponse.<FacturacionYPresupuestoResponse>builder()
-                            .success(true)
-                            .data(facturacionYPresupuestoService.obtener(id, token))
-                            .build()
-            );
-        
-        }
-
-    @Operation(
-        summary = "Actualizar facturación por ID",
-        description = "Modifica los datos de un registro de facturación existente. Requiere rol ADMIN."
-    )
-        @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "facturación y presupuestoa actualizados exitosamente"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Acceso denegado")
-    })
-
-    @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN')")
-    public ResponseEntity<ApiResponse<FacturacionYPresupuestoResponse>> actualizar(
-            @PathVariable Long id,
-            @Valid @RequestBody FacturacionYPresupuestoDTO dto,
-            @RequestHeader("Authorization") String token) {
-
-        return ResponseEntity.ok(
-                ApiResponse.<FacturacionYPresupuestoResponse>builder()
-                        .success(true)
-                        .message("Registro de facturación actualizado")
-                        .data(facturacionYPresupuestoService.actualizar(id, dto, token))
-                        .build()
-        );
+        mockMvc.perform(post("/api/v1/facturacio-y-presupuesto")
+                        .header("Authorization", "Bearer token-de-prueba")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(dto)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("se creo un facturacio y presupuesto"))
+                .andExpect(jsonPath("$.data.id").value(1))
+                .andExpect(jsonPath("$.data.paciente.nombrePaciente").value("Juan Pérez"))
+                .andExpect(jsonPath("$.data.medico.nombreMedico").value("Dra. Soto"));
     }
 
-    @Operation(
-        summary = "Eliminar facturación y presupuesto por ID",
-        description = "Remueve permanentemente un registro del sistema. Requiere rol ADMIN."
-    )
-        @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Facturación y presupuestoa eliminados exitosamente"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Acceso denegado")
-    })
+    @Test
+    void debeActualizarFacturacionYPresupuesto() throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
 
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> eliminar(@PathVariable Long id) {
+        FacturacionYPresupuestoDTO dto = new FacturacionYPresupuestoDTO();
+        dto.setPresupuesto(30.000);
+        dto.setRunPaciente("11111111-1");
+        dto.setNombrePaciente("Juan Pérez");
+        dto.setRunMedico("22222222-2");
+        dto.setNombreMedico("Dra. Soto");
+        dto.setTratamiento("tratamiento");
+        dto.setDiasDuracion(8);
+        dto.setGestionPagos("gestion pagos");
 
-        facturacionYPresupuestoService.eliminar(id);
+        PacienteResponse paciente = new PacienteResponse();
+        paciente.setRunPaciente("11111111-1");
+        paciente.setNombrePaciente("Juan Pérez");
 
-        return ResponseEntity.status(200).body(
-                ApiResponse.<Void>builder()
-                        .success(true)
-                        .message("Registro de facturación eliminado")
-                        .build()
-        );
+        MedicoResponse medico = new MedicoResponse();
+        medico.setRunMedico("22222222-2");
+        medico.setNombreMedico("Dra. Soto");
+
+        FacturacionYPresupuestoResponse response = FacturacionYPresupuestoResponse.builder()
+                .id(1L)
+                .presupuesto(30.000)
+                .paciente(paciente)
+                .medico(medico)
+                .tratamiento("tratamiento")
+                .diasDuracion(8)
+                .gestionPagos("gestion pagos")
+                .build();
+
+        when(service.actualizar(eq(1L), any(FacturacionYPresupuestoDTO.class), anyString()))
+                .thenReturn(response);
+
+        mockMvc.perform(put("/api/v1/facturacio-y-presupuesto/1")
+                        .header("Authorization", "Bearer token-de-prueba")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("se actualizo facturacio y presupuesto"))
+                .andExpect(jsonPath("$.data.paciente.nombrePaciente").value("Juan Pérez"));
+    }
+
+    @Test
+    void debeEliminarFacturacionYPresupuesto() throws Exception {
+        doNothing().when(service).eliminar(1L);
+
+        mockMvc.perform(delete("/api/v1/facturacio-y-presupuesto/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("se elimino facturacio y presupuesto"));
     }
 }
