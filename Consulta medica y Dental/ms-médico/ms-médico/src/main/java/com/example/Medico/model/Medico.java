@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 
 public class Medico {
     @Id
-    private String run;
+    private String runMedico;
 
     private String nombreMedico;
     private Integer edad;

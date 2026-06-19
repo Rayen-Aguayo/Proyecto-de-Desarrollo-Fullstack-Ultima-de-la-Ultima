@@ -3,7 +3,6 @@ package com.example.Medico.dto;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,7 +13,7 @@ import lombok.NoArgsConstructor;
 public class MedicoDTO {
     
     @NotBlank(message =  "El run no puede estar vacio")
-    private String run;
+    private String runMedico;
 
     @NotBlank(message =  "El nombre no puede estar vacio")
     private String nombreMedico;
